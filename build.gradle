@@ -1,0 +1,55 @@
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+buildscript {
+    final javaHome = System.env['JAVA_HOME']
+    if (javaHome) {
+        File jfxrt8Jar = new File("${javaHome}/jre/lib/ext/jfxrt.jar")
+        if (jfxrt8Jar.exists()) {
+             project.ext.javafxJar = jfxrt8Jar.canonicalPath
+        }
+    }
+    try {
+      println "JavaFX runtime jar: ${project.ext.javafxJar}"
+      dependencies {
+        classpath files(project.ext.javafxJar)
+      }
+    } catch (MissingPropertyException mpe) {
+        println "    Java8!"
+        System.exit 1
+    }
+}
+
+import com.sun.javafx.runtime.VersionInfo
+
+project.ext.actualJavaFXVersion = VersionInfo.runtimeVersion
+if (! project.ext.actualJavaFXVersion =~ groovyfx_requiredJavaFxVersion) {
+  println "    Required JavaFX version is '${groovyfx_requiredJavaFxVersion}' but actual version is '${project.ext.actualJavaFXVersion}'"
+  System.exit 1
+}
+
+repositories {
+    if (project.hasProperty('groovyfx_useMavenLocal') && Boolean.valueOf(project.groovyfx_useMavenLocal)) { mavenLocal() }
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:${groovyfx_groovyVersion}"
+    compile "org.ow2.asm:asm:${groovyfx_asmVersion}"
+    compile "org.codehaus.groovyfx:groovyfx:${groovyfx_groovyfxVersion}"
+    compile files(project.ext.javafxJar)
+    testCompile "junit:junit:${groovyfx_junitVersion}"
+    println "Groovy: ${groovyfx_groovyVersion}; ASM: ${groovyfx_asmVersion}; JUnit: ${groovyfx_junitVersion}"
+}
+
+jar.baseName = 'groovyfx-full3d'
+
+task wrap(type:Wrapper, description:"create a gradlew") {
+    gradleVersion = '1.12'
+}
+
+apply from: 'buildSrc/scripts/demo.gradle'
